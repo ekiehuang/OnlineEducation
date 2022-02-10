@@ -3,10 +3,14 @@ package com.atguigu.eduservice.controller;
 
 import com.atguigu.commonutils.R;
 import com.atguigu.eduservice.entity.EduTeacher;
+import com.atguigu.eduservice.entity.Vo.TeacherQuery;
 import com.atguigu.eduservice.service.EduTeacherService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,6 +42,66 @@ public class EduTeacherController {
     public R delTeacher(@PathVariable String id) {
         boolean remove = teacherService.removeById(id);
         if (remove) {
+            return R.ok();
+        } else {
+            return R.error();
+        }
+    }
+
+    @ApiOperation(value = "Display By Page")
+    @GetMapping("getTeacherPage/{current}/{limit}")
+    public R getTeacherPage(@PathVariable Long current,
+                            @PathVariable Long limit) {
+        Page<EduTeacher> page = new Page<>(current, limit);
+        teacherService.page(page, null);
+        List<EduTeacher> records = page.getRecords();
+        long total = page.getTotal();
+        //1、存入MAP
+//        Map<String,Object> map = new HashMap<>();
+//        map.put("list",records);
+//        map.put("total",total);
+//        return R.ok().data(map);
+        //2、直接拼接
+        return R.ok().data("list", records).data("total", total);
+
+    }
+
+    @ApiOperation(value = "Search By Conditions, Display By Page")
+    @PostMapping("getTeacherPage/{current}/{limit}")
+    public R getTeacherPage(@PathVariable Long current,
+                            @PathVariable Long limit,
+                            @RequestBody TeacherQuery teacherQuery) {
+        String name = teacherQuery.getName();
+        Integer level = teacherQuery.getLevel();
+        String begin = teacherQuery.getBegin();
+        String end = teacherQuery.getEnd();
+
+        QueryWrapper<EduTeacher> wrapper = new QueryWrapper<>();
+        if (!StringUtils.isEmpty(name)) {
+            wrapper.like("name", name);
+        }
+        if (!StringUtils.isEmpty(level)) {
+            wrapper.eq("level", level);
+        }
+        if (!StringUtils.isEmpty(begin)) {
+            wrapper.ge("gmt_create", begin);
+        }
+        if (!StringUtils.isEmpty(end)) {
+            wrapper.le("gmt_create", end);
+        }
+
+        Page<EduTeacher> page = new Page<>(current, limit);
+        teacherService.page(page, wrapper);
+        List<EduTeacher> records = page.getRecords();
+        long total = page.getTotal();
+        return R.ok().data("list", records).data("total", total);
+    }
+
+    @ApiOperation(value = "Add Teacher")
+    @PostMapping("/addTeacher")
+    public R addTeacher(@RequestBody EduTeacher eduTeacher) {
+        boolean save = teacherService.save(eduTeacher);
+        if (save) {
             return R.ok();
         } else {
             return R.error();
